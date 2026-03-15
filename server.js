@@ -42,7 +42,7 @@ const server = http.createServer(function(req, res) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": API_KEY,
+          ""x-api-key": API_KEY.trim(),
           "anthropic-version": "2023-06-01",
           "Content-Length": Buffer.byteLength(payload)
         }
