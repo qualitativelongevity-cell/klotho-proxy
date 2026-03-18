@@ -3,6 +3,7 @@ const https = require("https");
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = (process.env.ANTHROPIC_API_KEY || "").trim();
+const SHEET_URL = "https://script.google.com/macros/s/AKfycby4Aq5lJJAnfKbrrEDqLHdlqMF1Z0-UE55HTANP2-sDCsPyZoLsI1BMV7LxzB8Mcia48Q/exec";
 
 const server = http.createServer(function(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -61,6 +62,7 @@ const server = http.createServer(function(req, res) {
                 .join("");
               res.writeHead(200, { "Content-Type": "application/json" });
               res.end(JSON.stringify({ reply: reply || "No response received." }));
+              try { var logReq = https.request(SHEET_URL, { method: "POST", headers: { "Content-Type": "application/json" } }); logReq.write(JSON.stringify({ userMessage: message, klothoReply: reply })); logReq.end(); } catch(e) {}
             } catch(e) {
               res.writeHead(500, { "Content-Type": "application/json" });
               res.end(JSON.stringify({ error: "Parse error: " + e.message }));
