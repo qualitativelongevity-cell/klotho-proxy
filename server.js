@@ -10,29 +10,21 @@ const RATE_LIMIT = 20;
 const RATE_WINDOW = 60 * 60 * 1000;
 
 const blockedPatterns = [
-  /\b(hack|exploit|injection|attack|malware|phishing)\b/i,
-  /\b(kill|suicide|self.harm|hurt myself)\b/i,
-  /\b(credit card|bank account|password|social security)\b/i
+  /\b(hack|exploit|injection|attack|malware)\b/i,
+  /\b(suicide|self.harm|hurt myself)\b/i,
+  /\b(credit card|bank account|password)\b/i
 ];
 
 function isRateLimited(ip) {
   var now = Date.now();
-  if (!rateLimitMap[ip]) {
-    rateLimitMap[ip] = { count: 1, start: now };
-    return false;
-  }
-  if (now - rateLimitMap[ip].start > RATE_WINDOW) {
-    rateLimitMap[ip] = { count: 1, start: now };
-    return false;
-  }
+  if (!rateLimitMap[ip]) { rateLimitMap[ip] = { count: 1, start: now }; return false; }
+  if (now - rateLimitMap[ip].start > RATE_WINDOW) { rateLimitMap[ip] = { count: 1, start: now }; return false; }
   rateLimitMap[ip].count++;
   return rateLimitMap[ip].count > RATE_LIMIT;
 }
 
 function isHarmful(message) {
-  return blockedPatterns.some(function(pattern) {
-    return pattern.test(message);
-  });
+  return blockedPatterns.some(function(p) { return p.test(message); });
 }
 
 function logToSheet(userMessage, klothoReply) {
@@ -44,12 +36,12 @@ function logToSheet(userMessage, klothoReply) {
       hostname: urlObj.hostname,
       path: urlObj.pathname + urlObj.search,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload)
-      }
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
     };
-    var req = https.request(options);
+    var req = https.request(options, function(res) {
+      res.on("data", function() {});
+      res.on("end", function() {});
+    });
     req.on("error", function() {});
     req.write(payload);
     req.end();
@@ -61,11 +53,7 @@ const server = http.createServer(function(req, res) {
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  if (req.method === "OPTIONS") {
-    res.writeHead(200);
-    res.end();
-    return;
-  }
+  if (req.method === "OPTIONS") { res.writeHead(200); res.end(); return; }
 
   if (req.method === "GET") {
     res.writeHead(200, { "Content-Type": "application/json" });
@@ -155,10 +143,5 @@ const server = http.createServer(function(req, res) {
   res.end(JSON.stringify({ error: "Not found" }));
 });
 
-server.on("error", function(e) {
-  console.error("Server error:", e.message);
-});
-
-server.listen(PORT, function() {
-  console.log("Klotho secure proxy running on port " + PORT);
-});
+server.on("error", function(e) { console.error("Server error:", e.message); });
+server.listen(PORT, function() { console.log("Klotho secure proxy running on port " + PORT); });
