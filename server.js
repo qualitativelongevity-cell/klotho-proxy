@@ -150,7 +150,22 @@ const server = http.createServer(function(req, res) {
     });
     return;
   }
-
+if (req.method === "POST" && req.url === "/lead") {
+    var body = "";
+    req.on("data", function(chunk) { body += chunk.toString(); });
+    req.on("end", function() {
+      try {
+        var parsed = JSON.parse(body);
+        logToSheet(parsed.name + " | " + parsed.email, parsed.conversation);
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ status: "ok" }));
+      } catch(e) {
+        res.writeHead(400, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: e.message }));
+      }
+    });
+    return;
+  }
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));
 });
