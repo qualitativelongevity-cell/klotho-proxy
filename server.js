@@ -36,29 +36,19 @@ function logToSheet(userMessage, klothoReply) {
     var urlObj = new URL(SHEET_URL);
     var options = {
       hostname: urlObj.hostname,
-      port: 443,
       path: urlObj.pathname + urlObj.search,
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload)
-      },
-      maxRedirects: 5
+      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
     };
     var req = https.request(options, function(res) {
-      var data = "";
-      res.on("data", function(chunk) { data += chunk; });
-      res.on("end", function() { console.log("Sheet response:", res.statusCode, data); });
+      res.on("data", function() {});
+      res.on("end", function() {});
     });
-    req.on("error", function(e) { console.error("Sheet error:", e.message); });
+    req.on("error", function() {});
     req.write(payload);
     req.end();
-  } catch(e) {
-    console.error("logToSheet error:", e.message);
-  }
+  } catch(e) {}
 }
-
-const server = http.createServer(function(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
