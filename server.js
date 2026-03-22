@@ -29,52 +29,50 @@ function isHarmful(message) {
   return blockedPatterns.some(function(p) { return p.test(message); });
 }
 
+function postToUrl(hostname, urlPath, payload, callback) {
+  var options = {
+    hostname: hostname,
+    port: 443,
+    path: urlPath,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(payload)
+    }
+  };
+  var req = https.request(options, function(res) {
+    var data = "";
+    res.on("data", function(chunk) { data += chunk; });
+    res.on("end", function() {
+      if (callback) callback(res.statusCode, res.headers, data);
+    });
+  });
+  req.on("error", function(e) { console.error("Request error:", e.message); });
+  req.write(payload);
+  req.end();
+}
+
 function logToSheet(userMessage, klothoReply) {
   if (!SHEET_URL) return;
   try {
     var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
-    var options = {
-      hostname: "script.google.com",
-      path: SHEET_URL.replace("https://script.google.com", ""),
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": Buffer.byteLength(payload)
-      },
-      followRedirects: true
-    };
-    var req = https.request(options, function(res) {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        var location = res.headers.location;
-        var locUrl = new URL(location);
-        var req2 = https.request({
-          hostname: locUrl.hostname,
-          path: locUrl.pathname + locUrl.search,
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
-        }, function(res2) { res2.on("data", function(){}); res2.on("end", function(){ console.log("Sheet OK"); }); });
-        req2.on("error", function(e){ console.error("Sheet redirect error:", e.message); });
-        req2.write(payload);
-        req2.end();
+    var urlObj = new URL(SHEET_URL);
+    postToUrl(urlObj.hostname, urlObj.pathname + urlObj.search, payload, function(status, headers) {
+      if (status === 301 || status === 302) {
+        var location = headers.location;
+        if (location) {
+          var locUrl = new URL(location);
+          postToUrl(locUrl.hostname, locUrl.pathname + locUrl.search, payload, function(status2) {
+            console.log("Sheet response after redirect:", status2);
+          });
+        }
+      } else {
+        console.log("Sheet response:", status);
       }
-      res.on("data", function(){});
-      res.on("end", function(){});
     });
-    req.on("error", function(e) { console.error("Sheet error:", e.message); });
-    req.write(payload);
-    req.end();
-  } catch(e) { console.error("logToSheet error:", e.message); }
-}
-        req2.write(payload);
-        req2.end();
-      }
-      response.on("data", function() {});
-      response.on("end", function() {});
-    });
-    req.on("error", function(e) { console.error("Sheet error:", e.message); });
-    req.write(payload);
-    req.end();
-  } catch(e) { console.error("logToSheet error:", e.message); }
+  } catch(e) {
+    console.error("logToSheet error:", e.message);
+  }
 }
 
 const server = http.createServer(function(req, res) {
@@ -102,7 +100,6 @@ const server = http.createServer(function(req, res) {
 
   if (req.method === "POST" && req.url === "/chat") {
     var ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
-
     if (isRateLimited(ip)) {
       res.writeHead(429, { "Content-Type": "application/json" });
       res.end(JSON.stringify({ error: "Too many requests. Please try again later." }));
@@ -132,6 +129,7 @@ const server = http.createServer(function(req, res) {
 
         var options = {
           hostname: "api.anthropic.com",
+          port: 443,
           path: "/v1/messages",
           method: "POST",
           headers: {
