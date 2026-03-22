@@ -36,13 +36,37 @@ function logToSheet(userMessage, klothoReply) {
     var urlObj = new URL(SHEET_URL);
     var options = {
       hostname: urlObj.hostname,
+      port: 443,
       path: urlObj.pathname + urlObj.search,
       method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+      headers: { 
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload)
+      }
     };
-    var req = https.request(options, function(res) {
-      res.on("data", function() {});
-      res.on("end", function() {});
+    var req = https.request(options, function(response) {
+      if (response.statusCode === 302 && response.headers.location) {
+        var redirectUrl = new URL(response.headers.location);
+        var redirectOptions = {
+          hostname: redirectUrl.hostname,
+          port: 443,
+          path: redirectUrl.pathname + redirectUrl.search,
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(payload)
+          }
+        };
+        var req2 = https.request(redirectOptions, function(res2) {
+          res2.on("data", function() {});
+          res2.on("end", function() { console.log("Sheet updated successfully"); });
+        });
+        req2.on("error", function(e) { console.error("Sheet redirect error:", e.message); });
+        req2.write(payload);
+        req2.end();
+      }
+      response.on("data", function() {});
+      response.on("end", function() {});
     });
     req.on("error", function(e) { console.error("Sheet error:", e.message); });
     req.write(payload);
