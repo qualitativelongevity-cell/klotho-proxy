@@ -33,35 +33,38 @@ function logToSheet(userMessage, klothoReply) {
   if (!SHEET_URL) return;
   try {
     var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
-    var urlObj = new URL(SHEET_URL);
     var options = {
-      hostname: urlObj.hostname,
-      port: 443,
-      path: urlObj.pathname + urlObj.search,
+      hostname: "script.google.com",
+      path: SHEET_URL.replace("https://script.google.com", ""),
       method: "POST",
-      headers: { 
+      headers: {
         "Content-Type": "application/json",
         "Content-Length": Buffer.byteLength(payload)
-      }
+      },
+      followRedirects: true
     };
-    var req = https.request(options, function(response) {
-      if (response.statusCode === 302 && response.headers.location) {
-        var redirectUrl = new URL(response.headers.location);
-        var redirectOptions = {
-          hostname: redirectUrl.hostname,
-          port: 443,
-          path: redirectUrl.pathname + redirectUrl.search,
+    var req = https.request(options, function(res) {
+      if (res.statusCode === 301 || res.statusCode === 302) {
+        var location = res.headers.location;
+        var locUrl = new URL(location);
+        var req2 = https.request({
+          hostname: locUrl.hostname,
+          path: locUrl.pathname + locUrl.search,
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "Content-Length": Buffer.byteLength(payload)
-          }
-        };
-        var req2 = https.request(redirectOptions, function(res2) {
-          res2.on("data", function() {});
-          res2.on("end", function() { console.log("Sheet updated successfully"); });
-        });
-        req2.on("error", function(e) { console.error("Sheet redirect error:", e.message); });
+          headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
+        }, function(res2) { res2.on("data", function(){}); res2.on("end", function(){ console.log("Sheet OK"); }); });
+        req2.on("error", function(e){ console.error("Sheet redirect error:", e.message); });
+        req2.write(payload);
+        req2.end();
+      }
+      res.on("data", function(){});
+      res.on("end", function(){});
+    });
+    req.on("error", function(e) { console.error("Sheet error:", e.message); });
+    req.write(payload);
+    req.end();
+  } catch(e) { console.error("logToSheet error:", e.message); }
+}
         req2.write(payload);
         req2.end();
       }
