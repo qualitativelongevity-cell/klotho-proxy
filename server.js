@@ -28,7 +28,7 @@ function isHarmful(message) {
 }
 
 function logToSheet(userMessage, klothoReply) {
-  if (https://script.google.com/macros/s/AKfycby4Aq5lJJAnfKbrrEDqLHdlqMF1Z0-UE55HTANP2-sDCsPyZoLsI1BMV7LxzB8Mcia48Q/exec) return;
+ if (!SHEET_URL) return;
   try {
     var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
     var urlObj = new URL(SHEET_URL);
