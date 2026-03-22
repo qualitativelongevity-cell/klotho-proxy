@@ -29,73 +29,35 @@ function isHarmful(message) {
   return blockedPatterns.some(function(p) { return p.test(message); });
 }
 
-function postToUrl(hostname, urlPath, payload, callback) {
-  var options = {
-    hostname: hostname,
-    port: 443,
-    path: urlPath,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(payload)
-    }
-  };
-  var req = https.request(options, function(res) {
-    var data = "";
-    res.on("data", function(chunk) { data += chunk; });
-    res.on("end", function() {
-      if (callback) callback(res.statusCode, res.headers, data);
-    });
-  });
-  req.on("error", function(e) { console.error("Request error:", e.message); });
-  req.write(payload);
-  req.end();
-}
-
 function logToSheet(userMessage, klothoReply) {
   if (!SHEET_URL) return;
-  var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
-  var urlObj = new URL(SHEET_URL);
-  var options = {
-    hostname: urlObj.hostname,
-    port: 443,
-    path: urlObj.pathname + urlObj.search,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Length": Buffer.byteLength(payload)
-    }
-  };
-  var req = https.request(options, function(res) {
-    if (res.statusCode === 302) {
-      var loc = res.headers["location"];
-      var locUrl = new URL(loc);
-      var payload2 = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
-      var opts2 = {
-        hostname: locUrl.hostname,
-        port: 443,
-        path: locUrl.pathname + locUrl.search,
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(payload2)
-        }
-      };
-      var req2 = https.request(opts2, function(res2) {
-        res2.on("data", function() {});
-        res2.on("end", function() { console.log("Sheet updated"); });
-      });
-      req2.on("error", function(e) { console.error("Sheet error 2:", e.message); });
-      req2.write(payload2);
-      req2.end();
-    }
-    res.on("data", function() {});
-    res.on("end", function() {});
-  });
-  req.on("error", function(e) { console.error("Sheet error:", e.message); });
-  req.write(payload);
-  req.end();
+  try {
+    var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
+    var urlObj = new URL(SHEET_URL);
+    var options = {
+      hostname: urlObj.hostname,
+      port: 443,
+      path: urlObj.pathname + urlObj.search,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload)
+      },
+      maxRedirects: 5
+    };
+    var req = https.request(options, function(res) {
+      var data = "";
+      res.on("data", function(chunk) { data += chunk; });
+      res.on("end", function() { console.log("Sheet response:", res.statusCode, data); });
+    });
+    req.on("error", function(e) { console.error("Sheet error:", e.message); });
+    req.write(payload);
+    req.end();
+  } catch(e) {
+    console.error("logToSheet error:", e.message);
+  }
 }
+
 const server = http.createServer(function(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
