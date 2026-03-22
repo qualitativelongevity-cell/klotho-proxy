@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: system-ui, sans-serif; }
+html, body { width: 100%; height: 100%; background: #fff; }
+.head { background: #C9B8E8; color: #3d2d6b; padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+.av { width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.35); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 15px; flex-shrink: 0; color: #3d2d6b; }
+.nm { font-size: 14px; font-weight: 600; }
+.sb { font-size: 11px; opacity: 0.75; }
+.msgs { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; height: 300px; background: #f2f2f2; }
+.m { font-size: 13px; line-height: 1.55; padding: 9px 12px; border-radius: 12px; max-width: 88%; word-break: break-word; }
+.m.b { background: #ffffff; color: #333; align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid #e0e0e0; }
+.m.u { background: #C9B8E8; color: #3d2d6b; align-self: flex-end; border-bottom-right-radius: 3px; }
+.m.warn { background: #fff8e1; color: #7a5f00; align-self: flex-start; border: 1px solid #ffe082; border-bottom-left-radius: 3px; }
+.row { display: flex; gap: 6px; padding: 10px; border-top: 1px solid #e0e0e0; background: white; }
+.row input { flex: 1; border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; font-size: 13px; outline: none; -webkit-appearance: none; }
+.row input:focus { border-color: #C9B8E8; }
+.row button { background: #C9B8E8; color: #3d2d6b; border: none; border-radius: 8px; padding: 8px 14px; font-size: 13px; cursor: pointer; white-space: nowrap; font-weight: 600; }
+.row button:hover { background: #b8a4d9; }
+.btn-end { background: white !important; color: #3d2d6b !important; border: 1.5px solid #C9B8E8 !important; }
+.btn-end:hover { background: #f3eeff !important; }
+.lead-box { display: none; padding: 14px; background: #faf7ff; border-top: 1px solid #e0e0e0; flex-direction: column; gap: 10px; }
+.lead-box.show { display: flex; }
+.lead-box p { font-size: 12px; color: #555; line-height: 1.5; }
+.lead-box input { border: 1px solid #ddd; border-radius: 8px; padding: 8px 10px; font-size: 13px; outline: none; -webkit-appearance: none; width: 100%; }
+.lead-box input:focus { border-color: #C9B8E8; }
+.gdpr-row { display: flex; align-items: flex-start; gap: 8px; }
+.gdpr-row input[type="checkbox"] { margin-top: 3px; flex-shrink: 0; accent-color: #C9B8E8; }
+.gdpr-row label { font-size: 11px; color: #666; line-height: 1.5; }
+.gdpr-row a { color: #7c5cbf; text-decoration: underline; }
+.lead-submit { background: #C9B8E8; color: #3d2d6b; border: none; border-radius: 8px; padding: 9px 14px; font-size: 13px; cursor: pointer; font-weight: 600; width: 100%; }
+.lead-submit:hover { background: #b8a4d9; }
+.lead-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.privacy-link { text-align: center; font-size: 11px; color: #999; padding: 6px 10px 8px; background: white; border-top: 1px solid #f0f0f0; }
+.privacy-link a { color: #7c5cbf; text-decoration: underline; }
+</style>
+</head>
+<body>
+<div class="head">
+  <div class="av">K</div>
+  <div>
+    <div class="nm">Klotho</div>
+    <div class="sb">Wellness Coach · Online</div>
+  </div>
+</div>
+<div class="msgs" id="msgs">
+  <div class="m b">Hi! I am Klotho, the wellness assistant for Qualitative Longevity. How can I support your health journey today?</div>
+</div>
+<div class="row">
+  <input type="text" id="inp" placeholder="Ask me anything..." />
+  <button onclick="send()">Ask Klotho</button>
+  <button class="btn-end" onclick="endChat()">End Chat</button>
+</div>
+<div class="lead-box" id="leadBox">
+  <p id="leadIntro">Thank you for chatting with Klotho! Leave your details below and Dr. Petraki will reach out with a personalised follow-up for you.</p>
+  <input type="text" id="leadName" placeholder="Your name" />
+  <input type="email" id="leadEmail" placeholder="Your email address" />
+  <div class="gdpr-row">
+    <input type="checkbox" id="gdprCheck" />
+    <label for="gdprCheck" id="gdprLabel">I agree that my data will be used to contact me with personalised wellness information from Qualitative Longevity. <a href="https://www.qualitativelongevity.com/privacy-policy" target="_blank">Privacy Policy</a></label>
+  </div>
+  <button class="lead-submit" id="leadSubmit" onclick="submitLead()">Send my details to Dr. Petraki</button>
+</div>
+<div class="privacy-link">
+  <a href="https://www.qualitativelongevity.com/privacy-policy" target="_blank">Privacy Policy</a>
+</div>
+<script>
+var PROXY = "https://klotho-proxy.onrender.com/chat";
+var SYSPROMPT = "You are Klotho, the AI wellness assistant for Qualitative Longevity, the practice of Dr. Pelagia Petraki MD DiplBLM, a Diplomate of Lifestyle Medicine based in Athens, Greece. VERY IMPORTANT: Always detect the language of the user message and respond in the SAME language. If the user writes in Greek, respond entirely in Greek. If the user writes in English, respond entirely in English. Never mix languages in the same response. Dr. Petraki offers personalized wellness programs that holistically combine medical science and behavioural science. Each program is tailored to the individual patient following a thorough assessment. Always be warm, encouraging and motivational. Never diagnose or prescribe. Always recommend booking a consultation with Dr. Petraki for personalized medical advice. When someone describes a health concern, acknowledge it warmly, explain how a holistic lifestyle medicine approach can help, and invite them to book a consultation. CHRONIC FATIGUE AND LOW ENERGY: Fatigue is rarely caused by just one thing. At Qualitative Longevity we assess sleep quality, nutrition, stress levels, physical activity, hormonal balance and metabolic health together. Through a personalized program combining dietary changes, movement, sleep optimization and stress management techniques, we help patients restore sustainable energy from the inside out. A thorough assessment with Dr. Petraki is the first step to understanding what is draining your energy and how to restore it. POOR SLEEP: Sleep is the foundation of all health. Poor sleep affects mood, weight, immunity, heart health and cognitive function. We assess sleep habits, stress, screen exposure, nutrition timing and underlying medical factors. Your personalized program will include evidence-based sleep hygiene strategies, behavioural interventions and lifestyle adjustments tailored specifically to you. Quality sleep is not a luxury - it is a biological necessity and we can help you achieve it. WEIGHT MANAGEMENT: Weight is not just about calories. It is influenced by hormones, stress, sleep, gut health, emotional patterns and metabolic function. At Qualitative Longevity we take a whole-person approach with no crash diets and no quick fixes. We help you understand your body and build sustainable habits that support a healthy weight for life. Real change comes from understanding the root cause, not from restriction. HIGH BLOOD PRESSURE CHOLESTEROL AND BLOOD SUGAR: These are lifestyle-driven conditions that respond powerfully to lifestyle medicine. Through personalized nutrition plans, physical activity, stress reduction and behavioural coaching, many patients see significant improvements and often reduce or eliminate the need for medication under medical supervision. Dr. Petraki works with you to address root causes, not just numbers on a test result. STRESS AND BURNOUT: Chronic stress reshapes your biology - affecting your hormones, immune system, sleep, digestion and heart. At Qualitative Longevity we use evidence-based behavioural science tools including mindfulness, cognitive reframing, boundary setting and nervous system regulation techniques, combined with lifestyle changes that build resilience and restore balance. You do not have to keep running on empty. ANXIETY AND LOW MOOD: Lifestyle factors play a powerful role in mental health. Nutrition, physical activity, sleep, social connection and purpose are all deeply linked to mood and anxiety levels. Our holistic approach supports mental wellbeing alongside physical health - working with the body and mind together. We always recommend working in parallel with a mental health professional when needed. You deserve to feel well in both body and mind. BRAIN FOG: Difficulty concentrating, poor memory and mental fatigue are often signs that the brain is not getting what it needs. Common contributors include poor sleep, nutritional deficiencies, blood sugar instability, stress and inflammation. We assess all of these and create a plan to sharpen your mental clarity and cognitive performance. A clear mind is within reach. POOR NUTRITION: Food is information for your body. Poor nutrition drives inflammation, hormonal imbalance, low energy and chronic disease. At Qualitative Longevity we do not believe in one-size-fits-all diets. After a thorough assessment we create a personalized nutrition plan based on your health goals, preferences, culture and lifestyle - practical, sustainable and enjoyable. Eating well should feel good, not like a punishment. SEDENTARY LIFESTYLE: Movement is medicine. A sedentary lifestyle is one of the biggest risk factors for chronic disease, poor mood, weight gain and accelerated ageing. We help you find the right type, frequency and intensity of movement for your body and life - making physical activity something you enjoy and sustain, not a chore. Every step counts and we will help you find yours. HORMONAL CHANGES: Menopause, andropause and other hormonal transitions can significantly affect energy, mood, weight, sleep and quality of life. Lifestyle medicine offers powerful tools to support hormonal balance through nutrition, exercise, stress management and sleep - helping you navigate these changes with confidence and vitality. This is a transition, not a decline. INFLAMMATION AND CHRONIC DISEASE PREVENTION: Chronic low-grade inflammation is at the root of most modern diseases including heart disease, diabetes, cancer and dementia. Through an anti-inflammatory lifestyle - targeted nutrition, regular movement, quality sleep, stress reduction and avoidance of environmental toxins - we help you build a body that ages well and stays resilient. Prevention is always more powerful than cure. LONGEVITY AND HEALTHY AGEING: Living longer is only meaningful if you live well. At Qualitative Longevity we focus on healthspan - the years you live in full health and vitality. Drawing on the latest longevity science we help you optimize every pillar of health: nutrition, movement, sleep, stress, social connection and purpose - so you can reach your full potential at every age. IMPORTANT: After giving wellness advice, always end your response by naturally mentioning that if they would like a personalised follow-up from Dr. Petraki, they can click the End Chat button to leave their details. In English: If you would like a personalised follow-up from Dr. Petraki, simply click the End Chat button and leave your details. In Greek: Αν θέλετε εξατομικευμένη παρακολούθηση από την Δρ. Πετράκη, κάντε κλικ στο κουμπί Τέλος Συνομιλίας και αφήστε τα στοιχεία σας.";
+
+var busy = false;
+var rateCount = 0;
+var rateWindow = Date.now();
+var MAX_MSGS = 20;
+
+var harmfulPatterns = [/\b(hack|exploit|injection|attack|malware)\b/i, /\b(suicide|self.harm|hurt myself|kill myself)\b/i, /\b(drugs|illegal|narcotics)\b/i];
+var sensitivePatterns = [/\b(credit card|bank account|iban|password|pin)\b/i];
+
+function isHarmful(msg) { return harmfulPatterns.some(function(p) { return p.test(msg); }); }
+function isSensitive(msg) { return sensitivePatterns.some(function(p) { return p.test(msg); }); }
+function isRateLimited() {
+  var now = Date.now();
+  if (now - rateWindow > 60 * 60 * 1000) { rateCount = 0; rateWindow = now; }
+  rateCount++;
+  return rateCount > MAX_MSGS;
+}
+
+document.getElementById("inp").addEventListener("keydown", function(e) { if (e.key === "Enter") send(); });
+
+function addMsg(text, cls, id) {
+  var box = document.getElementById("msgs");
+  var d = document.createElement("div");
+  d.className = "m " + cls;
+  d.textContent = text;
+  if (id) d.id = id;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+
+function send() {
+  if (busy) return;
+  var inp = document.getElementById("inp");
+  var text = inp.value.trim();
+  if (!text) return;
+  if (isRateLimited()) { addMsg("You have sent many messages. Please take a moment and try again shortly, or click End Chat to connect with Dr. Petraki directly.", "warn"); inp.value = ""; return; }
+  if (isSensitive(text)) { inp.value = ""; addMsg(text, "u"); addMsg("I am here to support your wellness journey and I am not able to handle personal financial or security information. For personalised health support, I invite you to book a consultation with Dr. Petraki.", "b"); return; }
+  if (isHarmful(text)) { inp.value = ""; addMsg(text, "u"); addMsg("I hear you and I want to make sure you receive the right support. For urgent concerns please reach out to a healthcare professional or emergency services. Dr. Petraki would be glad to support your wellness journey - click End Chat to leave your details.", "b"); return; }
+  inp.value = "";
+  addMsg(text, "u");
+  busy = true;
+  var typing = addMsg("Klotho is thinking...", "b", "typingMsg");
+  fetch(PROXY, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: text, systemPrompt: SYSPROMPT })
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(d) { typing.textContent = d.reply || d.error || "Sorry, something went wrong."; busy = false; })
+  .catch(function(err) { typing.textContent = "Connection error: " + err.message + ". Please try again."; busy = false; });
+}
+
+function endChat() {
+  var leadBox = document.getElementById("leadBox");
+  leadBox.classList.add("show");
+  var msgs = document.querySelectorAll(".m.u");
+  var lastMsg = msgs.length ? msgs[msgs.length-1].textContent : "";
+  var isGreek = /[\u0370-\u03FF]/.test(lastMsg);
+  if (isGreek) {
+    document.getElementById("leadIntro").textContent = "Ευχαριστούμε που μιλήσατε με τον Klotho! Αφήστε τα στοιχεία σας παρακάτω και η Δρ. Πετράκη θα επικοινωνήσει μαζί σας για εξατομικευμένη παρακολούθηση.";
+    document.getElementById("leadName").placeholder = "Το όνομά σας";
+    document.getElementById("leadEmail").placeholder = "Η διεύθυνση email σας";
+    document.getElementById("leadSubmit").textContent = "Στείλτε τα στοιχεία μου στη Δρ. Πετράκη";
+    document.getElementById("gdprLabel").innerHTML = "Συμφωνώ τα δεδομένα μου να χρησιμοποιηθούν για επικοινωνία με εξατομικευμένες πληροφορίες ευεξίας από το Qualitative Longevity. <a href='https://www.qualitativelongevity.com/privacy-policy' target='_blank'>Πολιτική Απορρήτου</a>";
+  }
+  leadBox.scrollIntoView({ behavior: "smooth" });
+}
+
+function submitLead() {
+  var name = document.getElementById("leadName").value.trim();
+  var email = document.getElementById("leadEmail").value.trim();
+  var gdpr = document.getElementById("gdprCheck").checked;
+  if (!name || !email) { alert("Please enter your name and email."); return; }
+  if (!gdpr) { alert("Please accept the privacy policy to continue."); return; }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { alert("Please enter a valid email address."); return; }
+  var btn = document.getElementById("leadSubmit");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+  var allMsgs = document.querySelectorAll(".m");
+  var conversation = [];
+  allMsgs.forEach(function(m) {
+    if (m.classList.contains("u")) conversation.push("User: " + m.textContent);
+    if (m.classList.contains("b")) conversation.push("Klotho: " + m.textContent);
+  });
+  fetch("https://klotho-proxy.onrender.com/lead", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name: name, email: email, conversation: conversation.join("\n"), timestamp: new Date().toISOString() })
+  })
+  .then(function() {
+    document.getElementById("leadBox").innerHTML = "<p style='color:#3d2d6b;font-weight:600;text-align:center;padding:10px'>Thank you! Dr. Petraki will be in touch with you soon.<br>Ευχαριστούμε! Η Δρ. Πετράκη θα επικοινωνήσει μαζί σας σύντομα.</p>";
+  })
+  .catch(function() { btn.disabled = false; btn.textContent = "Send my details to Dr. Petraki"; alert("Something went wrong. Please try again."); });
+}
+</script>
+</body>
+</html>
