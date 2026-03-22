@@ -156,7 +156,7 @@ function submitLead() {
     if (m.classList.contains("u")) conversation.push("User: " + m.textContent);
     if (m.classList.contains("b")) conversation.push("Klotho: " + m.textContent);
   });
-  fetch("https://script.google.com/macros/s/AKfycby4Aq5lJJAnfKbrrEDqLHdlqMF1Z0-UE55HTANP2-sDCsPyZoLsI1BMV7LxzB8Mcia48Q/exec", {
+  fetch("https://klotho-proxy.onrender.com/lead", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ name: name, email: email, conversation: conversation.join("\n"), timestamp: new Date().toISOString() })
