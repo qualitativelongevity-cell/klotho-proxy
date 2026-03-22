@@ -1,5 +1,5 @@
 const http = require("http");
-const https = require("https");
+const https = require("follow-redirects").https;
 const fs = require("fs");
 const path = require("path");
 
