@@ -29,26 +29,53 @@ function isHarmful(message) {
   return blockedPatterns.some(function(p) { return p.test(message); });
 }
 
+function postToUrl(hostname, urlPath, payload, callback) {
+  var options = {
+    hostname: hostname,
+    port: 443,
+    path: urlPath,
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Content-Length": Buffer.byteLength(payload)
+    }
+  };
+  var req = https.request(options, function(res) {
+    var data = "";
+    res.on("data", function(chunk) { data += chunk; });
+    res.on("end", function() {
+      if (callback) callback(res.statusCode, res.headers, data);
+    });
+  });
+  req.on("error", function(e) { console.error("Request error:", e.message); });
+  req.write(payload);
+  req.end();
+}
+
 function logToSheet(userMessage, klothoReply) {
   if (!SHEET_URL) return;
   try {
     var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
     var urlObj = new URL(SHEET_URL);
-    var options = {
-      hostname: urlObj.hostname,
-      path: urlObj.pathname + urlObj.search,
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(payload) }
-    };
-    var req = https.request(options, function(res) {
-      res.on("data", function() {});
-      res.on("end", function() {});
+    postToUrl(urlObj.hostname, urlObj.pathname + urlObj.search, payload, function(status, headers) {
+      if (status === 301 || status === 302) {
+        var location = headers.location;
+        if (location) {
+          var locUrl = new URL(location);
+          postToUrl(locUrl.hostname, locUrl.pathname + locUrl.search, payload, function(status2) {
+            console.log("Sheet response after redirect:", status2);
+          });
+        }
+      } else {
+        console.log("Sheet response:", status);
+      }
     });
-    req.on("error", function() {});
-    req.write(payload);
-    req.end();
-  } catch(e) {}
+  } catch(e) {
+    console.error("logToSheet error:", e.message);
+  }
 }
+
+const server = http.createServer(function(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
