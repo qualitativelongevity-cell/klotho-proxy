@@ -55,6 +55,18 @@ const server = http.createServer(function(req, res) {
 
   if (req.method === "OPTIONS") { res.writeHead(200); res.end(); return; }
 
+  if (req.method === "GET" && req.url === "/") {
+    var fs = require("fs");
+    var path = require("path");
+    var filePath = path.join(__dirname, "public", "index.html");
+    fs.readFile(filePath, function(err, data) {
+      if (err) { res.writeHead(404); res.end("Not found"); return; }
+      res.writeHead(200, { "Content-Type": "text/html" });
+      res.end(data);
+    });
+    return;
+  }
+
   if (req.method === "GET") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "Klotho proxy is running" }));
