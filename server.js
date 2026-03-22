@@ -1,5 +1,7 @@
 const http = require("http");
 const https = require("https");
+const fs = require("fs");
+const path = require("path");
 
 const PORT = process.env.PORT || 3000;
 const API_KEY = (process.env.ANTHROPIC_API_KEY || "").trim();
@@ -28,7 +30,7 @@ function isHarmful(message) {
 }
 
 function logToSheet(userMessage, klothoReply) {
- if (!SHEET_URL) return;
+  if (!SHEET_URL) return;
   try {
     var payload = JSON.stringify({ userMessage: userMessage, klothoReply: klothoReply });
     var urlObj = new URL(SHEET_URL);
@@ -42,10 +44,10 @@ function logToSheet(userMessage, klothoReply) {
       res.on("data", function() {});
       res.on("end", function() {});
     });
-    req.on("error", function() {});
+    req.on("error", function(e) { console.error("Sheet error:", e.message); });
     req.write(payload);
     req.end();
-  } catch(e) {}
+  } catch(e) { console.error("logToSheet error:", e.message); }
 }
 
 const server = http.createServer(function(req, res) {
@@ -56,8 +58,6 @@ const server = http.createServer(function(req, res) {
   if (req.method === "OPTIONS") { res.writeHead(200); res.end(); return; }
 
   if (req.method === "GET" && req.url === "/") {
-    var fs = require("fs");
-    var path = require("path");
     var filePath = path.join(__dirname, "public", "index.html");
     fs.readFile(filePath, function(err, data) {
       if (err) { res.writeHead(404); res.end("Not found"); return; }
@@ -150,13 +150,16 @@ const server = http.createServer(function(req, res) {
     });
     return;
   }
-if (req.method === "POST" && req.url === "/lead") {
+
+  if (req.method === "POST" && req.url === "/lead") {
     var body = "";
     req.on("data", function(chunk) { body += chunk.toString(); });
     req.on("end", function() {
       try {
         var parsed = JSON.parse(body);
-        logToSheet(parsed.name + " | " + parsed.email, parsed.conversation);
+        var userMessage = "LEAD | Name: " + (parsed.name || "") + " | Email: " + (parsed.email || "");
+        var klothoReply = parsed.conversation || "";
+        logToSheet(userMessage, klothoReply);
         res.writeHead(200, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ status: "ok" }));
       } catch(e) {
@@ -166,6 +169,7 @@ if (req.method === "POST" && req.url === "/lead") {
     });
     return;
   }
+
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));
 });
