@@ -13,6 +13,12 @@ html, body { width: 100%; height: 100%; background: #fff; }
 .sb { font-size: 11px; opacity: 0.75; }
 .disclaimer { font-size: 10.5px; color: #6b5a8c; background: #f6f2fc; padding: 6px 12px; text-align: center; border-bottom: 1px solid #e8ddf5; line-height: 1.4; }
 .msgs { padding: 12px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; height: 300px; background: #f2f2f2; }
+@media (max-width: 480px) {
+  .msgs { height: 55vh; min-height: 380px; }
+  .m { font-size: 14.5px; }
+  .row input { font-size: 16px; padding: 11px 12px; }
+  .row button { font-size: 14px; padding: 11px 14px; }
+}
 .m { font-size: 13px; line-height: 1.55; padding: 9px 12px; border-radius: 12px; max-width: 88%; word-break: break-word; }
 .m.b { background: #ffffff; color: #333; align-self: flex-start; border-bottom-left-radius: 3px; border: 1px solid #e0e0e0; }
 .m.u { background: #C9B8E8; color: #3d2d6b; align-self: flex-end; border-bottom-right-radius: 3px; }
