@@ -1,37 +1,38 @@
+r · JS
 const http = require("http");
 const https = require("follow-redirects").https;
 const fs = require("fs");
 const path = require("path");
-
+ 
 const PORT = process.env.PORT || 3000;
 const API_KEY = (process.env.ANTHROPIC_API_KEY || "").trim();
 const SHEET_URL = (process.env.SHEET_URL || "").trim();
-
+ 
 const rateLimitMap = {};
 const RATE_LIMIT = 20;
 const RATE_WINDOW = 60 * 60 * 1000;
-
+ 
 // Cyber/security and sensitive-data patterns (unrelated to personal safety)
 const securityPatterns = [
   /\b(hack|exploit|injection|malware)\b/i,
   /\b(credit card|bank account|password)\b/i
 ];
-
+ 
 // Self-harm / suicidal ideation — Greek and English
 const selfHarmPatterns = [
   /\b(suicide|suicidal|self.harm|hurt myself|kill myself|end my life|want to die|don.?t want to (live|be here))\b/i,
   /(αυτοκτον\w*|να\s+σκοτωθώ|να\s+βλάψω\s+τον\s+εαυτό\s+μου|θέλω\s+να\s+πεθάνω|δεν\s+αντέχω\s+άλλο|να\s+τελειώσω\s+τη\s+ζωή\s+μου|αυτοτραυματισμ\w*)/i
 ];
-
+ 
 // Threats of harm toward another person — Greek and English
 const threatToOthersPatterns = [
   /\b(kill|murder|hurt|harm|attack|stab|shoot)\b.{0,20}\b(him|her|them|someone|somebody|my \w+)\b/i,
   /\bhomicidal\b/i,
   /(φονικές\s+σκέψεις|σκέψεις\s+φονικές|θέλω\s+να\s+σκοτώσω|να\s+σκοτώσω\s+(τον|την|κάποιον)|να\s+βλάψω\s+κάποιον|να\s+τραυματίσω\s+κάποιον|να\s+επιτεθώ\s+σε)/i
 ];
-
+ 
 const isGreekText = /[\u0370-\u03FF]/;
-
+ 
 function isRateLimited(ip) {
   var now = Date.now();
   if (!rateLimitMap[ip]) { rateLimitMap[ip] = { count: 1, start: now }; return false; }
@@ -39,11 +40,11 @@ function isRateLimited(ip) {
   rateLimitMap[ip].count++;
   return rateLimitMap[ip].count > RATE_LIMIT;
 }
-
+ 
 function matchesAny(patterns, message) {
   return patterns.some(function(p) { return p.test(message); });
 }
-
+ 
 // Returns: "self_harm" | "threat_to_others" | "security" | null
 function classifySafety(message) {
   if (matchesAny(selfHarmPatterns, message)) return "self_harm";
@@ -51,7 +52,7 @@ function classifySafety(message) {
   if (matchesAny(securityPatterns, message)) return "security";
   return null;
 }
-
+ 
 function crisisReply(category, message) {
   var greek = isGreekText.test(message);
   if (category === "self_harm") {
@@ -68,7 +69,7 @@ function crisisReply(category, message) {
     ? "Είμαι εδώ για να υποστηρίξω το ταξίδι ευεξίας σας. Για αυτό το θέμα, παρακαλώ επικοινωνήστε απευθείας με την ιατρό."
     : "I'm here to support your wellness journey and I'm not able to handle this type of request. For personalised support, please book a consultation with Dr. Petraki.";
 }
-
+ 
 function postToUrl(hostname, urlPath, payload, callback) {
   var options = {
     hostname: hostname,
@@ -91,7 +92,7 @@ function postToUrl(hostname, urlPath, payload, callback) {
   req.write(payload);
   req.end();
 }
-
+ 
 function logToSheet(userMessage, klothoReply) {
   if (!SHEET_URL) return;
   try {
@@ -114,14 +115,14 @@ function logToSheet(userMessage, klothoReply) {
     console.error("logToSheet error:", e.message);
   }
 }
-
+ 
 const server = http.createServer(function(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, GET, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
+ 
   if (req.method === "OPTIONS") { res.writeHead(200); res.end(); return; }
-
+ 
   if (req.method === "GET" && req.url === "/") {
     var filePath = path.join(__dirname, "public", "index.html");
     fs.readFile(filePath, function(err, data) {
@@ -131,13 +132,13 @@ const server = http.createServer(function(req, res) {
     });
     return;
   }
-
+ 
   if (req.method === "GET") {
     res.writeHead(200, { "Content-Type": "application/json" });
     res.end(JSON.stringify({ status: "Klotho proxy is running" }));
     return;
   }
-
+ 
   if (req.method === "POST" && req.url === "/chat") {
     var ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
     if (isRateLimited(ip)) {
@@ -145,7 +146,7 @@ const server = http.createServer(function(req, res) {
       res.end(JSON.stringify({ error: "Too many requests. Please try again later." }));
       return;
     }
-
+ 
     var body = "";
     req.on("data", function(chunk) { body += chunk.toString(); });
     req.on("end", function() {
@@ -153,7 +154,7 @@ const server = http.createServer(function(req, res) {
         var parsed = JSON.parse(body);
         var message = parsed.message || "";
         var systemPrompt = parsed.systemPrompt || "You are Klotho, a friendly wellness coach.";
-
+ 
         var safetyCategory = classifySafety(message);
         if (safetyCategory) {
           var reply = crisisReply(safetyCategory, message);
@@ -166,14 +167,14 @@ const server = http.createServer(function(req, res) {
           res.end(JSON.stringify({ reply: reply }));
           return;
         }
-
+ 
         var payload = JSON.stringify({
           model: "claude-sonnet-5",
           max_tokens: 1000,
           system: systemPrompt,
           messages: [{ role: "user", content: message }]
         });
-
+ 
         var options = {
           hostname: "api.anthropic.com",
           port: 443,
@@ -186,14 +187,14 @@ const server = http.createServer(function(req, res) {
             "Content-Length": Buffer.byteLength(payload)
           }
         };
-
+ 
         var apiReq = https.request(options, function(apiRes) {
           var data = "";
           apiRes.on("data", function(chunk) { data += chunk.toString(); });
           apiRes.on("end", function() {
             try {
               var result = JSON.parse(data);
-
+ 
               // Anthropic returned an error object (bad model id, bad key, rate limit, etc.)
               if (result.type === "error" || apiRes.statusCode >= 400) {
                 console.error(
@@ -207,16 +208,16 @@ const server = http.createServer(function(req, res) {
                 }));
                 return;
               }
-
+ 
               var reply = (result.content || [])
                 .filter(function(b) { return b.type === "text"; })
                 .map(function(b) { return b.text; })
                 .join("");
-
+ 
               if (!reply) {
                 console.error("Empty reply from Anthropic. Raw response:", data);
               }
-
+ 
               logToSheet(message, reply);
               res.writeHead(200, { "Content-Type": "application/json" });
               res.end(JSON.stringify({ reply: reply || "I'm having trouble responding right now — please try again shortly." }));
@@ -227,16 +228,16 @@ const server = http.createServer(function(req, res) {
             }
           });
         });
-
+ 
         apiReq.on("error", function(e) {
           console.error("API request error:", e.message);
           res.writeHead(500, { "Content-Type": "application/json" });
           res.end(JSON.stringify({ error: "Request error: " + e.message }));
         });
-
+ 
         apiReq.write(payload);
         apiReq.end();
-
+ 
       } catch(e) {
         res.writeHead(400, { "Content-Type": "application/json" });
         res.end(JSON.stringify({ error: "Invalid request: " + e.message }));
@@ -244,7 +245,7 @@ const server = http.createServer(function(req, res) {
     });
     return;
   }
-
+ 
   if (req.method === "POST" && req.url === "/lead") {
     var body = "";
     req.on("data", function(chunk) { body += chunk.toString(); });
@@ -263,10 +264,10 @@ const server = http.createServer(function(req, res) {
     });
     return;
   }
-
+ 
   res.writeHead(404, { "Content-Type": "application/json" });
   res.end(JSON.stringify({ error: "Not found" }));
 });
-
+ 
 server.on("error", function(e) { console.error("Server error:", e.message); });
 server.listen(PORT, function() { console.log("Klotho secure proxy running on port " + PORT); });
